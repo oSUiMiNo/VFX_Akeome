@@ -58,7 +58,7 @@ GameObject:
   - component: {fileID: 3175782382889687457}
   - component: {fileID: 3175782382889687458}
   m_Layer: 0
-  m_Name: MeshParticleVFX2
+  m_Name: MeshParticleVFX3
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
