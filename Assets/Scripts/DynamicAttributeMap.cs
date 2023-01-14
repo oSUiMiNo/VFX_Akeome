@@ -21,37 +21,48 @@ using UnityEngine.VFX;
 /// エディタ上では実質、これをアタッチしたオブシェクトがエフェクトそのもののように扱う。
 /// アタッチするオブシェクトのネーミングは「子オブシェクトの名前+Unit」とか良いと思う。
 /// </summary>
-public class MeshParticleUnit : MonoBehaviour
+public class DynamicAttributeMap : VFXUnitComponent
 {
     public static class PropName
     {
         public const string PositionMap = "PositionMap";
         public const string UVMap = "UVMap";
+        public const string VertexCount = "ParticleCount";
+        public const string NormalMap = "NormalMap";
         public const string ModelMainTex = "ModelMainTex";
-        public const string ParticleCount = "ParticleCount";
     }
-
-
-    public VisualEffect effect;
+    
     public MapSet mapSet;
     public Texture modelMainTex;
 
-    private void Start()
+    protected override void Init()
     {
-        effect = transform.GetChild(0).GetComponent<VisualEffect>();
+        SetProperties();
     }
 
-    void Update()
+    public override void SetProperties()
     {
-        DinamicSetMeshParticle();
-    }
-
-    void DinamicSetMeshParticle()
-    {
-        effect.SetTexture(PropName.PositionMap, mapSet.position);
-        effect.SetTexture(PropName.UVMap, mapSet.uv);
-        effect.SetTexture(PropName.ModelMainTex, modelMainTex);
-        effect.SetInt(PropName.ParticleCount, mapSet.vtxCount);
+        vfx.SetTexture(PropName.UVMap, mapSet.uv);
+        vfx.SetTexture(PropName.PositionMap, mapSet.position);
+        vfx.SetTexture(PropName.NormalMap, mapSet.normal);
+        vfx.SetTexture(PropName.ModelMainTex, modelMainTex);
+        vfx.SetInt(PropName.VertexCount, mapSet.vtxCount);
     }
 }
  
+
+
+
+public abstract class VFXUnitComponent : MonoBehaviourMyExtention
+{
+    public VisualEffect vfx;
+
+    void Start()
+    {
+        vfx = transform.GetChild(0).GetComponent<VisualEffect>();
+        Init();
+    }
+
+    protected virtual void Init() { }
+    public abstract void SetProperties();
+}

@@ -14,7 +14,8 @@ public class MeshParticle : MonoBehaviour
 
     class Eff
     {
-        public MeshParticleUnit unit;
+        //public DynamicAttributeMap unit;
+        public GameObject unit;
         public float effectDiableDelay;
         public float pointCountPerArea;
         public bool startEffect;
@@ -23,16 +24,16 @@ public class MeshParticle : MonoBehaviour
             string unitPrefabName,
             float effectDiableDelay,
             float pointCountPerArea,
+            Transform transform,
             bool startEffect = true
             )
         {
-            GameObject a = (GameObject)Resources.Load(unitPrefabName);
-            MeshParticleUnit unitPrefab = a.GetComponent<MeshParticleUnit>();
-            this.unit = Instantiate(unitPrefab);
+            this.unit = Instantiate((GameObject)Resources.Load(unitPrefabName));
+            this.unit.transform.SetParent(transform);
             this.effectDiableDelay = effectDiableDelay;
             this.pointCountPerArea = pointCountPerArea;
             this.startEffect = startEffect;
-
+            
             Debug.Log($"Effコンストラクタ {unit}");
         }
     }
@@ -40,21 +41,36 @@ public class MeshParticle : MonoBehaviour
     
     Animator pausedAnim;
 
+
     void Start()
     {
-        effs.Add(new Eff("MeshParticleVFXUnit1", modelEnableDelay + 5, 6000));
-        effs.Add(new Eff("MeshParticleVFXUnit2", modelDiableDelay, 3000));
-        effs.Add(new Eff("MeshParticleVFXUnit3", modelEnableDelay + 15, 3000));
+        effs.Add(new Eff("MeshParticleVFXUnit1", modelEnableDelay + 5, 6000, transform));
+        effs.Add(new Eff("MeshParticleVFXUnit2", modelDiableDelay, 3000, transform));
+        effs.Add(new Eff("MeshParticleVFXUnit3", modelEnableDelay + 15, 3000, transform));
         Destroy(gameObject, autoDestroyDelay);
         StartCoroutine(StartTargetActiveSequence());
-        effs.ForEach(eff => UpdateEffect(eff));
+        effs.ForEach(eff => InitEffect(eff));
     }
 
 
-    void UpdateEffect(Eff eff)
+    void InitEffect(Eff eff)
     {
         if (!eff.startEffect) return;
-        InitEffect(eff);
+
+        var modelTrans = model.transform;
+        transform.SetPositionAndRotation(modelTrans.position, modelTrans.rotation);
+
+        var meshAndTexs = GetMeshData();
+        foreach (var (mesh, tex) in meshAndTexs)
+        {
+            eff.unit.SetActive(true);
+            eff.unit.transform.SetParent(transform, false);
+
+            DynamicAttributeMap dynamicMap = eff.unit.GetComponent<DynamicAttributeMap>();
+            dynamicMap.mapSet = MeshToMap.ComputeMap(mesh, eff.pointCountPerArea);
+            dynamicMap.modelMainTex = tex;
+        }
+
         StartCoroutine(StartEffectAtiveSequence(eff));
     }
 
@@ -62,11 +78,9 @@ public class MeshParticle : MonoBehaviour
     IEnumerator StartTargetActiveSequence()
     {
         yield return new WaitForSeconds(modelDiableDelay);
-
         model.SetActive(false);
 
         yield return new WaitForSeconds(modelEnableDelay);
-
         //model.SetActive(true);
 
         if (pausedAnim != null)
@@ -77,35 +91,32 @@ public class MeshParticle : MonoBehaviour
         }
     }
 
+
     IEnumerator StartEffectAtiveSequence(Eff eff)
     {
-        Debug.Log($"1  {eff.unit}  {eff.effectDiableDelay}");
         yield return new WaitForSeconds(eff.effectDiableDelay);
-        Debug.Log($"2  {eff.unit}  {eff.effectDiableDelay}");
         Destroy(eff.unit.gameObject);
         effs.Remove(eff);        
     }
 
 
-    void InitEffect(Eff eff)
-    {
+    //void InitEffect(Eff eff)
+    //{
+    //    var modelTrans = model.transform;
+    //    transform.SetPositionAndRotation(modelTrans.position, modelTrans.rotation);
 
-        Debug.Log("Init");
-        var modelTrans = model.transform;
-        transform.SetPositionAndRotation(modelTrans.position, modelTrans.rotation);
+    //    var meshAndTexs = GetMeshData();
+    //    foreach (var (mesh, tex) in meshAndTexs)
+    //    {
+    //        eff.unit.gameObject.SetActive(true);
+    //        eff.unit.transform.SetParent(transform, false);
 
-        var meshAndTexs = GetMeshData();
-        foreach (var (mesh, tex) in meshAndTexs)
-        {
-            Debug.Log("Init2");
-        
-            eff.unit.gameObject.SetActive(true);
-            eff.unit.transform.SetParent(transform, false);
-
-            eff.unit.mapSet = MeshToMap.ComputeMap(mesh, eff.pointCountPerArea);
-            eff.unit.modelMainTex = tex;
-        }
-    }
+    //        DynamicAttributeMap dynamicMap = eff.unit.GetComponent<DynamicAttributeMap>();
+    //        dynamicMap.mapSet = MeshToMap.ComputeMap(mesh, eff.pointCountPerArea);
+    //        dynamicMap.modelMainTex = tex;
+    //        //eff.unit.vfx.SetTexture("ModelMainTex", tex);
+    //    }
+    //}
 
 
     IEnumerable<(Mesh, Texture)> GetMeshData()
@@ -136,7 +147,6 @@ public class MeshParticle : MonoBehaviour
             var materials = renderer.sharedMaterials;
 
             Debug.Log($"下 {materials}");
-
             Debug.Log(materials.First().mainTexture);
 
             return new[] { (mesh, materials.First().mainTexture) };
